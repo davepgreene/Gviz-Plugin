@@ -1,0 +1,32 @@
+.input_error {
+	background-color: yellow;
+	font-weight: bold;
+	padding: 10px;
+	border-top: 1px solid red;
+	border-bottom: 1px solid red;
+	display: none;
+}
+.err {
+	background-color: red;
+	color: white;
+}
+.noerr {
+	background-color: transparent;
+	color: black;
+}
+.form_table {
+	/*border-collapse: collapse;*/
+	border-top: 1px solid black;
+}
+.form_table:last-child {
+	border-bottom: 1px solid black;
+}
+.form_table td {
+	/*border: 1px solid red;*/
+}
+.type_r1, .type_r2 {
+	text-align: right;
+}
+.t_divider {
+	width: 30px;
+}
