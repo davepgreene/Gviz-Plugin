@@ -1,0 +1,1 @@
+This plugin is designed to create google charts and display them within a WordPress instance.
