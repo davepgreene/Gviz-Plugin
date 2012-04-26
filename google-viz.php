@@ -29,7 +29,10 @@ if (!isset($wpdb->gviz_dummydata)) { $wpdb->gviz_dummydata = $tableprefix.'gviz_
 
 // Add neccessary JSAPI scripts to the page header
 add_action('init', 'gviz_queue_scripts');
-function gviz_queue_scripts() { wp_enqueue_script('google.ajax', 'http://www.google.com/jsapi'); wp_enqueue_script ( 'jquery' ); }
+function gviz_queue_scripts() { 
+	wp_enqueue_script( 'google.ajax', 'http://www.google.com/jsapi' ); 
+	wp_enqueue_script( 'jquery' );
+}
 // Create shortcode
 add_shortcode( 'gvizchart', array('Gviz_Chart', 'gviz_shortcode' ) );
 // Provide a place for the admin to specify a user's organization
@@ -41,26 +44,6 @@ if ( is_admin() ) {
 }
 // Define our chart class
 class Gviz_Chart {
-	public $title;
-	public $height;
-	public $width;
-	public $controls;
-	public $id;
-	public $type;
-	public $col_id;
-	public $line_id;
-	public $gauge_id;
-	public $pie_id;
-	public $svar_name;
-	public $svar;
-	public $axis0;
-	public $axis0_name;
-	public $axis1;
-	public $axis1_name;
-	public $num_tables;
-	public $data_table;
-	public $data;
-	public $user_org;
 	
 	public function gviz_shortcode( $atts ) {
 		$options = get_option('gviz_opts');
@@ -117,12 +100,19 @@ class Gviz_Chart {
 				// Select box attributes
 				$chart->svar=array_search($options['f'.$i.'_svar'], array_keys($data[0]));
 				$chart->svar_name=$options['f'.$i.'_svar'];
+				$chart->svar_color=$options['f'.$i.'_svar_color'];
 				// Axes
 				$chart->axis0=array_search($options['f'.$i.'_axis0'], array_keys($data[0]));
 				$chart->axis0_name=$options['f'.$i.'_axis0'];
 				$chart->axis1=array_search($options['f'.$i.'_axis1'], array_keys($data[0]));
 				$chart->axis1_name=$options['f'.$i.'_axis1'];
-				
+				$chart->axis1_color=$options['f'.$i.'_axis1_color'];
+				// Get var and color from additional numeric variable fields
+				/*foreach($options as $i=>$v) {
+					if(substr($i,3, 6) == "axis1_") {
+						krumo($v);
+					}
+				}*/
 				// Chart type
 				switch ($options['f'.$i.'_type']) {
 				case 'column': 
@@ -179,6 +169,16 @@ class Gviz_Chart {
 		});";
 	}
 	private function build_column() {
+		if(empty($this->axis1_color)) {
+			$color1 = $this->random_color();
+		} else {
+			$color1 = $this->axis1_color;
+		}
+		if(empty($this->svar_color)) {
+			$color2 = $this->random_color();
+		} else {
+			$color2 = $this->svar_color;
+		}
 		return "var column = new google.visualization.ChartWrapper({
 					'chartType': 'ColumnChart',
 					'containerId': '".$this->col_id."_chart1',
@@ -188,7 +188,7 @@ class Gviz_Chart {
 					'legend': 'none',
 					'vAxis': {'title': '".$this->axis1_name."', 'titleTextStyle': {'fontSize': 16}, 'textPosition': 'out' },
 					'hAxis': {'title': '".$this->axis0_name."', 'titleTextStyle': {'fontSize': 16}, 'textPosition': 'out' },
-					'colors': ['#".$this->random_color()."','#".$this->random_color()."','#".$this->random_color()."'],
+					'colors': ['".$color1."','".$color2."','#".$this->random_color()."'],
 					'chartArea': { left:40, top: 30, width: '75%', height: '75%'},
 					}
 					});";

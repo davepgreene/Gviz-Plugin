@@ -8,13 +8,16 @@
 		add_options_page( 'Google Visualization Options', 'Google Visualization', 'manage_options', __FILE__, 'gviz_options' );
 		// add javascript
 		wp_enqueue_script ( 'google-viz', path_join ( WP_PLUGIN_URL, basename ( dirname ( __FILE__ ) ) . '/gviz_script.js' ), array ('jquery' ) );
+		wp_enqueue_script ( 'color-picker', path_join ( WP_PLUGIN_URL, basename ( dirname ( __FILE__ ) ) . '/jquery.miniColors.min.js' ), array ('jquery' ) );
 		// add css
+		
 	}
 	function gviz_opt_init(){
 		register_setting( 'gviz_options', 'gviz_opts', 'gviz_opts_validate' );
 	}
 	function gviz_options() {
 		echo '<link type="text/css" rel="stylesheet" href="'.path_join ( WP_PLUGIN_URL, basename ( dirname ( __FILE__ ) )).'/gviz_style.css'.'" />' . "\n";
+		echo '<link type="text/css" rel="stylesheet" href="'.path_join ( WP_PLUGIN_URL, basename ( dirname ( __FILE__ ) )).'/jquery.miniColors.css'.'" />' . "\n";
 		if (!current_user_can('manage_options'))  {
 			wp_die( __('You do not have sufficient permissions to access this page.') );
 		}
@@ -33,7 +36,15 @@
 	<?php    echo "<h3>" . __( 'Chart Options' ) . "</h3>"; ?>
 	<form action="options.php" method="post">
 		<?php settings_fields('gviz_options'); ?>
-		<?php $options = get_option('gviz_opts'); krumo($options); ?>
+		<?php $options = get_option('gviz_opts'); krumo($options); 
+		foreach ($options as $k => $v) {
+			if (substr($k, 3, 6) == "axis1_" && strlen($k)==10) {
+				$temp[] = substr($k, -1);
+			}
+		}
+		sort($temp);
+		$num_vars = array_pop($temp);
+?>
 	<table class="form_table"><thead><tr><th colspan=6><?php echo "<h3>" . __( 'Chart 1' ) . "</h3>"; ?></th><th colspan=5><?php if($options) echo "<h3>" . __( 'Table Preview' ) . "</h3>"; ?></th></tr></thead>
 	<tbody><tr><td><label for="gviz_opts[f1_title]"><?php echo __( 'Title' ) . ":"; ?></label></td><td colspan=4><input type="text" name="gviz_opts[f1_title]" value="<?php echo $options['f1_title']; ?>" /></td><td class="t_divider">&nbsp;</td><?php if($options) { ?><td rowspan=13><?php Gviz_Chart::gviz_shortcode(array("num" => "1", "width" => 575, "height" => 250)); ?></td><?php } ?></tr>
 	
@@ -53,11 +64,40 @@
 	
 	<tr><td colspan=2><label for="gviz_opts[f1_axis0]"><?php echo __( 'Category' ) . ":"; ?></label></td><td colspan=3><select name="gviz_opts[f1_axis0]"><option value="">Select...</option><?php foreach($var_types as $i=>$v) { if($v == 'string') { echo '<option value="'.$i.'" '.selected( $options['f1_axis0'], $i ).'>'.$i.'</option>'; }} ?></select></td><td class="t_divider">&nbsp;</td></tr>
 	
-	<tr><td colspan=2><label for="gviz_opts[f1_axis1]"><?php echo __( 'Numeric' ) . ":"; ?></label></td><td colspan=2><select name="gviz_opts[f1_axis1]"><option value="">Select...</option><?php foreach($var_types as $i=>$v) { if($v != 'string') { echo '<option value="'.$i.'" '.selected( $options['f1_axis1'], $i ).'>'.$i.'</option>'; }} ?></select></td><td><a href='' class='add_numvar button-secondary'>+</a></td><td class="t_divider">&nbsp;</td></tr>
+	<tr><td colspan=2><label for="gviz_opts[f1_axis1]"><?php echo __( 'Numeric' ) . ":"; ?></label></td><td colspan=2><select name="gviz_opts[f1_axis1]"><option value="">Select...</option><?php foreach($var_types as $i=>$v) { if($v != 'string') { echo '<option value="'.$i.'" '.selected( $options['f1_axis1'], $i ).'>'.$i.'</option>'; }} ?></select></td><td><input type="hidden" class="color_picker" value="<?php echo $options['f1_axis1_color']; ?>" name="gviz_opts[f1_axis1_color]"></td><td><a href='' class='add_numvar button-secondary'>+</a></td><td class="t_divider">&nbsp;</td></tr>
+	
+	<?php 
+		for($a=1;$a<=$num_vars;$a++) { ?>
+		<tr class="new_var">
+			<td colspan=2>
+				<label for="gviz_opts[f1_axis1_<?php echo $a ?>]">Numeric:</label>
+			</td>
+			<td colspan=2>
+				<select name="gviz_opts[f1_axis1_<?php echo $a ?>]">
+					<option value="">Select...</option>
+					<?php 
+					foreach($var_types as $i=>$v) {
+						if($v != 'string') {
+							echo '<option value="'.$i.'" '.selected( $options['f1_axis1_'.$a.''], $i ).'>'.$i.'</option>'; 
+						}
+					} 
+					?>
+				</select>
+			</td>
+			<td>
+				<input type="hidden" class="color_picker" name="gviz_opts[f1_axis1_<?php echo $a ?>_color]" value="<?php echo $options['f1_axis1_'.$a.'_color']; ?>">
+			</td>
+			<td>
+				<a href="" class="del_numvar button-secondary">-</a>
+			</td>
+			<td class="t_divider">&nbsp;</td>
+		</tr>
+	<?php }
+	?>
 	
 	<tr><td><label for="gviz_opts[f1_slider]"><?php echo __( 'Slider' ) . ":"; ?></label></td><td><input type="checkbox" name="gviz_opts[f1_slider]" value="slider" <?php checked('slider', $options['f1_slider']); ?> /></td><td><label for="gviz_opts[f1_picker]"><?php echo __( 'Picker' ) . ":"; ?></label></td><td colspan=2><input type="checkbox" name="gviz_opts[f1_picker]" value="picker" <?php checked('picker', $options['f1_picker']); ?> /></td><td class="t_divider">&nbsp;</td></tr>
 	
-	<tr class="slider_var"><td colspan=2><label for="gviz_opts[f1_svar]"><?php echo __( 'Slider variable' ) . ":"; ?></label></td><td colspan=3><select name="gviz_opts[f1_svar]"><option value="">Select...</option><?php foreach($var_types as $i=>$v) { if($v != 'string') { echo '<option value="'.$i.'" '.selected( $options['f1_svar'], $i ).'>'.$i.'</option>'; } } ?></select></td><td class="t_divider">&nbsp;</td></tr>
+	<tr class="slider_var"><td colspan=2><label for="gviz_opts[f1_svar]"><?php echo __( 'Slider variable' ) . ":"; ?></label></td><td colspan=2><select name="gviz_opts[f1_svar]"><option value="">Select...</option><?php foreach($var_types as $i=>$v) { if($v != 'string') { echo '<option value="'.$i.'" '.selected( $options['f1_svar'], $i ).'>'.$i.'</option>'; } } ?></select></td><td><input type="hidden" class="color_picker" value="<?php echo $options['f1_svar_color']; ?>" name="gviz_opts[f1_svar_color]"></td><td class="t_divider">&nbsp;</td></tr>
 	</tbody></table>
 	<?php 
 	$temp=array();
@@ -90,11 +130,11 @@
 	
 	<tr><td colspan=2><label for="gviz_opts[f<?php echo $i ?>_axis0]"><?php echo __( 'Category' ) . ":"; ?></label></td><td colspan=3><select name="gviz_opts[f<?php echo $i ?>_axis0]"><option value="">Select...</option><?php foreach($var_types as $j=>$v) { if($v == 'string') { echo '<option value="'.$j.'" '.selected( $options['f'.$i.'_axis0'], $j ).'>'.$j.'</option>'; }} ?></select></td><td class="t_divider">&nbsp;</td></tr>
 	
-	<tr><td colspan=2><label for="gviz_opts[f<?php echo $i ?>_axis1]"><?php echo __( 'Numeric' ) . ":"; ?></label></td><td colspan=2><select name="gviz_opts[f<?php echo $i ?>_axis1]"><option value="">Select...</option><?php foreach($var_types as $j=>$v) { if($v != 'string') { echo '<option value="'.$j.'" '.selected( $options['f'.$i.'_axis1'], $j ).'>'.$j.'</option>'; }} ?></select></td><td><a href='' class='add_numvar button-secondary'>+</a></td><td class="t_divider">&nbsp;</td></tr>
+	<tr><td colspan=2><label for="gviz_opts[f<?php echo $i ?>_axis1]"><?php echo __( 'Numeric' ) . ":"; ?></label></td><td colspan=2><select name="gviz_opts[f<?php echo $i ?>_axis1]"><option value="">Select...</option><?php foreach($var_types as $j=>$v) { if($v != 'string') { echo '<option value="'.$j.'" '.selected( $options['f'.$i.'_axis1'], $j ).'>'.$j.'</option>'; }} ?></select></td><td><input type="hidden" class="color_picker" value="<?php echo $options['f'.$i.'_axis1_color']; ?>" name="gviz_opts[f<?php echo $i ?>_axis1_color]"></td><td><a href='' class='add_numvar button-secondary'>+</a></td><td class="t_divider">&nbsp;</td></tr>
 	
 	<tr><td><label for="gviz_opts[f<?php echo $i ?>_slider]"><?php echo __( 'Slider' ) . ":"; ?></label></td><td><input type="checkbox" name="gviz_opts[f<?php echo $i ?>_slider]" value="slider" <?php checked('slider', $options['f'.$i.'_slider']); ?> /></td><td><label for="gviz_opts[f<?php echo $i ?>_picker]"><?php echo __( 'Picker' ) . ":"; ?></label></td><td colspan=2><input type="checkbox" name="gviz_opts[f<?php echo $i ?>_picker]" value="picker" <?php checked('picker', $options['f'.$i.'_picker']); ?> /></td><td class="t_divider">&nbsp;</td></tr>
 	
-	<tr class="slider_var"><td colspan=2><label for="gviz_opts[f<?php echo $i ?>_svar]"><?php echo __( 'Slider variable' ) . ":"; ?></label></td><td colspan=3><select name="gviz_opts[f<?php echo $i ?>_svar]"><option value="">Select...</option><?php foreach($var_types as $j=>$v) { if($v != 'string') { echo '<option value="'.$j.'" '.selected( $options['f'.$i.'_svar'], $j ).'>'.$j.'</option>'; } } ?></select></td><td class="t_divider">&nbsp;</td></tr>
+	<tr class="slider_var"><td colspan=2><label for="gviz_opts[f<?php echo $i ?>_svar]"><?php echo __( 'Slider variable' ) . ":"; ?></label></td><td colspan=2><select name="gviz_opts[f<?php echo $i ?>_svar]"><option value="">Select...</option><?php foreach($var_types as $j=>$v) { if($v != 'string') { echo '<option value="'.$j.'" '.selected( $options['f'.$i.'_svar'], $j ).'>'.$j.'</option>'; } } ?></select></td><td><input type="hidden" class="color_picker" value="<?php echo $options['f'.$i.'_svar_color']; ?>" name="gviz_opts[f<?php echo $i ?>_svar_color]"></td><td class="t_divider">&nbsp;</td></tr>
 	</tbody></table>
 	<?php } } ?>
 	<div id="tbl_end"></div>
@@ -111,6 +151,7 @@
 	</form>
 	<br />
 	<hr />
+	<p>Some icons by <a href="http://p.yusukekamiyamane.com/">Yusuke Kamiyamane</a>. All rights reserved.</p>
 	<?php /*    echo "<h4>" . __( 'File Uploader' ) . "</h4>"; ?>
 
 	<form action="" method="post" enctype="multipart/form-data">
@@ -131,12 +172,24 @@
 			$temp[] = substr($v,0,2);
 		}
 		$num_tables = count(array_unique($temp));
+		foreach($input as $key=>$val) {
+				if(substr($key, -5) == "color") {
+					$colors[$key] = $val;
+				}
+			}
 		for($i=1;$i<=$num_tables;$i++) {
 			$input['f'.$i.'_title'] =  wp_filter_nohtml_kses($input['f'.$i.'_title']);
 			if($input['f'.$i.'_title']=='') $input['f'.$i.'_title']='Chart '.$i;
 			if(!is_numeric($input['f'.$i.'_height'])) $input['f'.$i.'_height']=200;
 			if(!is_numeric($input['f'.$i.'_width'])) $input['f'.$i.'_width']=300;
+			foreach($colors as $k=>&$v) {
+				if(strtoupper($v) == "#FFFFFF") {
+					$v = "";
+				}
+			}
+			unset($v);
 		}
+		$input = array_merge($input, $colors);
 		return $input;
 	}
 	add_action( 'init', 'gviz_init' );
